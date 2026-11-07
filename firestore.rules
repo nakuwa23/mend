@@ -1,0 +1,90 @@
+rules_version = '2';
+
+// Mend — Cloud Firestore security rules.
+// The app hides staff screens from students, but these rules are what
+// actually enforce access control on the server.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Verified ALU account (email domain + email verification).
+    function verifiedAlu() {
+      return signedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.matches('.*@(alustudent|alueducation)[.]com$');
+    }
+
+    function isStaff() {
+      return verifiedAlu()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'staff';
+    }
+
+    function changedOnly(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+
+    // ---------- users/{uid} ----------
+    match /users/{uid} {
+      // You can read your own profile; staff can read profiles (to see hidden reporters).
+      allow read: if signedIn() && (request.auth.uid == uid || isStaff());
+
+      // Created once at sign-up. Role must start as "student".
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.role == 'student'
+        && request.resource.data.email == request.auth.token.email.lower();
+
+      // You may edit your own profile but never your role.
+      // Staff are promoted by an admin in the Firebase console.
+      allow update: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.role == resource.data.role;
+
+      allow delete: if false;
+    }
+
+    // ---------- incidents/{id} ----------
+    match /incidents/{id} {
+      allow read: if verifiedAlu();
+
+      // Any verified user can report. Status must start as "submitted",
+      // the reporter must be the signed-in user, and a new report cannot
+      // start with inflated "affected" counts (prevents queue-jumping).
+      allow create: if verifiedAlu()
+        && request.resource.data.reporterId == request.auth.uid
+        && request.resource.data.status == 'submitted'
+        && request.resource.data.affectedUids is list
+        && request.resource.data.affectedUids.size() <= 1
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 5
+        && request.resource.data.title.size() <= 80
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 500
+        && request.resource.data.category in ['facilities', 'water', 'electricity', 'furniture', 'sanitation', 'safety']
+        && request.resource.data.urgency in ['low', 'medium', 'high'];
+
+      allow update: if
+        // 1. Staff: change status / add timeline entries.
+        (isStaff()
+          && changedOnly(['status', 'history', 'updatedAt'])
+          && request.resource.data.status in ['submitted', 'inProgress', 'resolved', 'closed'])
+        // 2. Any verified user: add or remove only themselves from "affected".
+        || (verifiedAlu()
+          && changedOnly(['affectedUids'])
+          && request.resource.data.affectedUids.toSet()
+               .difference(resource.data.affectedUids.toSet()).hasOnly([request.auth.uid])
+          && resource.data.affectedUids.toSet()
+               .difference(request.resource.data.affectedUids.toSet()).hasOnly([request.auth.uid]));
+
+      // Reporters can withdraw their own report while it is still "submitted";
+      // staff can delete any report (spam, duplicates).
+      allow delete: if isStaff()
+        || (verifiedAlu()
+          && resource.data.reporterId == request.auth.uid
+          && resource.data.status == 'submitted');
+    }
+  }
+}
