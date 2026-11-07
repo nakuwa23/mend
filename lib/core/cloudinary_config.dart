@@ -1,6 +1,6 @@
 class CloudinaryConfig {
-  static const cloudName = 'CLOUD_NAME';
-  static const uploadPreset = 'UNSIGNED_PRESET';
+  static const cloudName = 'xo84avlq';
+  static const uploadPreset = 'mend_unsigned';
 
   static bool get isConfigured =>
       cloudName != 'CLOUD_NAME' && uploadPreset != 'UNSIGNED_PRESET';
