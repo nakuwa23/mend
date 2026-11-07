@@ -7,7 +7,94 @@ import '../../models/incident_enums.dart';
 import '../../providers/incident_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common.dart';
+import '../../widgets/incident_card.dart';
 import '../../widgets/status_pill.dart';
+import '../common/incident_details_screen.dart';
+
+class StaffQueueScreen extends StatelessWidget {
+  const StaffQueueScreen({super.key});
+
+  void _open(BuildContext context, Incident incident) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => IncidentDetailsScreen(incidentId: incident.id),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<IncidentProvider>();
+    final items = provider.staffList(provider.staffTab);
+    String tabLabel(StaffTab tab) => switch (tab) {
+          StaffTab.fresh => 'Fresh',
+          StaffTab.active => 'Active',
+          StaffTab.overdue => 'Overdue',
+        };
+
+    return SafeArea(
+      bottom: false,
+      child: CustomScrollView(
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            sliver: SliverList.list(
+              children: [
+                Text('Staff queue', style: Theme.of(context).textTheme.headlineSmall),
+                const SizedBox(height: 14),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      for (final tab in StaffTab.values) ...[
+                        SelectChip(
+                          label: '${tabLabel(tab)}  ${provider.staffCount(tab)}',
+                          selected: provider.staffTab == tab,
+                          onTap: () => provider.setStaffTab(tab),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
+          if (provider.loading)
+            const SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (provider.error != null && provider.all.isEmpty)
+            SliverToBoxAdapter(
+              child: EmptyState(
+                icon: Icons.cloud_off_outlined,
+                title: 'Couldn\'t load queue',
+                message: provider.error,
+              ),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
+              sliver: SliverList.separated(
+                itemCount: items.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  final incident = items[index];
+                  return IncidentCard(
+                    incident: incident,
+                    showUrgency: true,
+                    onTap: () => _open(context, incident),
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
 
 Future<void> showUpdateStatusSheet(BuildContext context, Incident incident) {
   return showModalBottomSheet<void>(
