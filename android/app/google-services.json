@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "505057335342",
+    "project_id": "mend-campus",
+    "storage_bucket": "mend-campus.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:505057335342:android:4e9b1b5540368466cba7bf",
+        "android_client_info": {
+          "package_name": "com.nakuwa.mend"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBG1_RCKA1aTYyaif04oJ_OtGj9dZsMYOE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
