@@ -42,3 +42,4 @@ class AppUser {
         'role': UserRole.student.name,
         'createdAt': FieldValue.serverTimestamp(),
       };
+}
