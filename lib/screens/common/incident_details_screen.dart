@@ -10,7 +10,7 @@ import '../../theme/app_colors.dart';
 import '../../widgets/common.dart';
 import '../../widgets/status_pill.dart';
 import '../../widgets/status_timeline.dart';
-import '../staff/update_status_sheet.dart';
+import '../staff/staff_queue_screen.dart';
 
 /// Shared by students and staff. 
 class IncidentDetailsScreen extends StatelessWidget {
